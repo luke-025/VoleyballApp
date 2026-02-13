@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sponsorzy i Partnerzy – plansza</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #020617;
+      color: #e5e7eb;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sponsor-frame {
+      width: 90vw;
+      height: 80vh;
+      max-width: 1500px;
+      max-height: 900px;
+      background: #ffffff;
+      border: 1px solid #111827;
+      color: #111827;
+      border-radius: 28px;
+      box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.85),
+        0 0 0 1px rgba(15, 23, 42, 0.9);
+      padding: 32px 38px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .sponsor-title {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      margin-top: 6px;
+    }
+
+    .sponsor-subtitle {
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-top: -6px;
+    }
+
+    .sponsor-content {
+      flex: 1;
+      border-radius: 20px;
+      border: 1px dashed #374151;
+      background: rgba(0, 0, 0, 0);
+      /* To pole zostawiamy PUSTE – miejsce na film / slajdy z OBS */
+    }
+  </style>
+</head>
+<body>
+  <div class="sponsor-frame">
+    <div class="sponsor-title">Sponsorzy i Partnerzy</div>
+    <div class="sponsor-subtitle">Oni wspierają nasz turniej!</div>
+
+    <div class="sponsor-content"></div>
+  </div>
+</body>
+</html>

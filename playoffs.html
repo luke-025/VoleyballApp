@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>MR Energy Cup – Drabinka play-off</title>
+  <style>
+    :root {
+      --bg: #020617;
+      --panel: #020617;
+      --panel-soft: #030712;
+      --border: #1f2937;
+      --border-soft: #111827;
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --accent: #38aa33;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    header .subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    main {
+      flex: 1;
+      padding: 16px 20px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .layout {
+      width: 100%;
+      max-width: 1600px;
+      display: grid;
+      grid-template-columns: 3fr 1.4fr;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .bracket-panel,
+    .placement-panel {
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: radial-gradient(circle at top left, #111827, var(--panel));
+      padding: 16px 18px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .section-title {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin: 0 0 12px;
+    }
+
+    .bracket-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1.2fr 1.4fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .bracket-column-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .match-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .match-card {
+      border-radius: 14px;
+      border: 1px solid var(--border-soft);
+      background: var(--panel-soft);
+      padding: 8px 10px;
+      font-size: 13px;
+      position: relative;
+    }
+
+    .match-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .match-teams {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .team-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .team-name {
+      flex: 1;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .team-seed {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-right: 2px;
+      white-space: nowrap;
+    }
+
+    .team-empty {
+      opacity: 0.6;
+      font-weight: 400;
+      font-style: italic;
+    }
+
+    .team-row.winner .team-name {
+      color: #bbf7d0;
+    }
+
+    .team-row.loser .team-name {
+      color: var(--text-muted);
+    }
+
+    .match-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .match-highlight {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56, 170, 51, 0.45);
+    }
+
+    .final-block {
+      border-radius: 16px;
+      border: 1px solid var(--border-soft);
+      background: #020617;
+      padding: 10px 12px;
+      margin-top: 10px;
+    }
+
+    .final-block-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .placement-panel {
+      background: radial-gradient(circle at top, #111827, #020617);
+    }
+
+    .placement-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .placement-card {
+      border-radius: 14px;
+      border: 1px solid var(--border-soft);
+      background: #030712;
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+
+    .placement-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .legend {
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    body.overlay header {
+      display: none;
+    }
+
+    body.overlay main {
+      padding: 16px 24px 24px;
+    }
+
+    body.overlay .layout {
+      max-width: 1700px;
+    }
+
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MR Energy Cup – Drabinka play-off</h1>
+    <div class="subtitle">
+      Miejsca 1A, 2A, 3A itd. liczone automatycznie na podstawie tabel grupowych w panelu głównym.
+    </div>
+  </header>
+
+  <main>
+    <div class="layout">
+      <section class="bracket-panel">
+        <h2 class="section-title">Play-off – 1–8 miejsce</h2>
+
+        <div class="bracket-grid">
+          <div>
+            <div class="bracket-column-title">Ćwierćfinały</div>
+            <div class="match-column" id="qfColumn"></div>
+          </div>
+
+          <div>
+            <div class="bracket-column-title">Półfinały</div>
+            <div class="match-column" id="sfColumn"></div>
+          </div>
+
+          <div>
+            <div class="bracket-column-title">Finał i mecz o 3. miejsce</div>
+            <div class="match-column" id="finalColumn"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="placement-panel">
+        <h2 class="section-title">Mecze o miejsca 9–12</h2>
+        <div class="placement-grid" id="placementGrid"></div>
+        <div class="legend">
+          <strong>Legenda:</strong> 1A = 1. miejsce w grupie A, 2C = 2. miejsce w grupie C itd.
+          <br/>
+          Kolejność w grupach liczona wg tych samych zasad co w tabelach turniejowych.
+          <br/>
+          Wyniki meczów play-off wprowadzasz w panelu w sekcji „Dodaj mecz ręcznie” – wybierz odpowiedni etap (ćwierćfinał, półfinał, finał, mecz o 3. miejsce, inny).
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "volley_tournament_state_v1";
+
+    function getViewMode() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("view") || "";
+      } catch {
+        return "";
+      }
+    }
+    if (getViewMode() === "overlay") {
+      document.body.classList.add("overlay");
+    }
+
+    let teams = [];
+    let matchesHistory = [];
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed.teams)) return false;
+        teams = parsed.teams;
+        matchesHistory = Array.isArray(parsed.matchesHistory) ? parsed.matchesHistory : [];
+        return true;
+      } catch (e) {
+        console.warn("Błąd odczytu stanu z localStorage:", e);
+        return false;
+      }
+    }
+
+    function getMatchStage(m) {
+      return m.stage || "group";
+    }
+
+    function getHeadToHeadWinner(teamId1, teamId2) {
+      const relevantMatches = matchesHistory.filter(
+        m =>
+          (!m.stage || m.stage === "group") &&
+          (
+            (m.teamAId === teamId1 && m.teamBId === teamId2) ||
+            (m.teamAId === teamId2 && m.teamBId === teamId1)
+          )
+      );
+      if (!relevantMatches.length) return null;
+      let wins1 = 0, wins2 = 0;
+      for (const m of relevantMatches) {
+        if (m.setsA > m.setsB) {
+          if (m.teamAId === teamId1) wins1++; else wins2++;
+        } else if (m.setsB > m.setsA) {
+          if (m.teamBId === teamId1) wins1++; else wins2++;
+        }
+      }
+      if (wins1 > wins2) return teamId1;
+      if (wins2 > wins1) return teamId2;
+      return null;
+    }
+
+    function compareTeams(a, b) {
+      if (b.tablePoints !== a.tablePoints) return b.tablePoints - a.tablePoints;
+      const h2h = getHeadToHeadWinner(a.id, b.id);
+      if (h2h === a.id) return -1;
+      if (h2h === b.id) return 1;
+
+      const diffA = a.setsWon - a.setsLost;
+      const diffB = b.setsWon - b.setsLost;
+      if (diffB !== diffA) return diffB - diffA;
+
+      const ratioA = a.pointsAgainst === 0 ? a.pointsFor : a.pointsFor / a.pointsAgainst;
+      const ratioB = b.pointsAgainst === 0 ? b.pointsFor : b.pointsFor / b.pointsAgainst;
+      if (ratioB !== ratioA) return ratioB - ratioA;
+
+      return a.name.localeCompare(b.name, "pl");
+    }
+
+    function getGroupStandings(groupKey) {
+      return teams
+        .filter(t => (t.group || "").toUpperCase() === groupKey)
+        .sort(compareTeams);
+    }
+
+    function getPosition(groupKey, posIndex) {
+      const list = getGroupStandings(groupKey);
+      return list[posIndex] || null;
+    }
+
+    function findMatchResult(teamId1, teamId2, allowedStages) {
+      if (teamId1 == null || teamId2 == null) return null;
+      let found = null;
+      for (const m of matchesHistory) {
+        const stage = getMatchStage(m);
+        if (allowedStages && !allowedStages.includes(stage)) continue;
+        if (
+          (m.teamAId === teamId1 && m.teamBId === teamId2) ||
+          (m.teamAId === teamId2 && m.teamBId === teamId1)
+        ) {
+          found = m; // bierzemy ostatni pasujący
+        }
+      }
+      if (!found) return null;
+
+      let winnerId = null;
+      if (found.setsA > found.setsB) winnerId = found.teamAId;
+      else if (found.setsB > found.setsA) winnerId = found.teamBId;
+
+      return { match: found, winnerId };
+    }
+
+    function createTeamRow(team, seedLabel, resultInfo, isFirstTeam) {
+      const row = document.createElement("div");
+      row.className = "team-row";
+
+      const seedSpan = document.createElement("span");
+      seedSpan.className = "team-seed";
+      seedSpan.textContent = seedLabel;
+
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "team-name";
+
+      if (team) {
+        nameSpan.textContent = team.name;
+      } else {
+        nameSpan.textContent = "–";
+        nameSpan.classList.add("team-empty");
+      }
+
+      if (team && resultInfo && resultInfo.winnerId) {
+        if (resultInfo.winnerId === team.id) {
+          row.classList.add("winner");
+        } else {
+          row.classList.add("loser");
+        }
+      }
+
+      row.appendChild(seedSpan);
+      row.appendChild(nameSpan);
+      return row;
+    }
+
+    function getScoreTextForPair(teamA, teamB, resultInfo) {
+      if (!teamA || !teamB || !resultInfo) return "";
+      const m = resultInfo.match;
+      if (!m) return "";
+
+      let aSets, bSets;
+      if (m.teamAId === teamA.id && m.teamBId === teamB.id) {
+        aSets = m.setsA;
+        bSets = m.setsB;
+      } else if (m.teamAId === teamB.id && m.teamBId === teamA.id) {
+        aSets = m.setsB;
+        bSets = m.setsA;
+      } else {
+        return "";
+      }
+      return `${aSets}:${bSets}`;
+    }
+
+    function renderBracket() {
+      const qfColumn = document.getElementById("qfColumn");
+      const sfColumn = document.getElementById("sfColumn");
+      const finalColumn = document.getElementById("finalColumn");
+      const placementGrid = document.getElementById("placementGrid");
+      if (!qfColumn || !sfColumn || !finalColumn || !placementGrid) return;
+
+      qfColumn.innerHTML = "";
+      sfColumn.innerHTML = "";
+      finalColumn.innerHTML = "";
+      placementGrid.innerHTML = "";
+
+      const pos = {
+        "1A": getPosition("A", 0),
+        "2A": getPosition("A", 1),
+        "3A": getPosition("A", 2),
+        "1B": getPosition("B", 0),
+        "2B": getPosition("B", 1),
+        "3B": getPosition("B", 2),
+        "1C": getPosition("C", 0),
+        "2C": getPosition("C", 1),
+        "3C": getPosition("C", 2),
+        "1D": getPosition("D", 0),
+        "2D": getPosition("D", 1),
+        "3D": getPosition("D", 2)
+      };
+
+      const qfDefs = [
+        { label: "Ćwierćfinał 1", seedA: "1A", seedB: "2C" },
+        { label: "Ćwierćfinał 2", seedA: "1B", seedB: "2D" },
+        { label: "Ćwierćfinał 3", seedA: "1C", seedB: "2A" },
+        { label: "Ćwierćfinał 4", seedA: "1D", seedB: "2B" }
+      ];
+
+      const qfStates = [];
+
+      qfDefs.forEach((mDef, idx) => {
+        const teamA = pos[mDef.seedA];
+        const teamB = pos[mDef.seedB];
+
+        const resultInfo = (teamA && teamB)
+          ? findMatchResult(teamA.id, teamB.id, ["quarterfinal"])
+          : null;
+
+        const card = document.createElement("div");
+        card.className = "match-card match-highlight";
+
+        const label = document.createElement("div");
+        label.className = "match-label";
+        label.textContent = mDef.label;
+        card.appendChild(label);
+
+        const teamsWrap = document.createElement("div");
+        teamsWrap.className = "match-teams";
+        teamsWrap.appendChild(createTeamRow(teamA, mDef.seedA, resultInfo, true));
+        teamsWrap.appendChild(createTeamRow(teamB, mDef.seedB, resultInfo, false));
+        card.appendChild(teamsWrap);
+
+        const scoreText = getScoreTextForPair(teamA, teamB, resultInfo);
+        if (scoreText) {
+          const note = document.createElement("div");
+          note.className = "match-note";
+          note.textContent = `Wynik: ${scoreText}`;
+          card.appendChild(note);
+        }
+
+        qfColumn.appendChild(card);
+
+        let winnerTeam = null;
+        let loserTeam = null;
+        if (resultInfo && resultInfo.winnerId && teamA && teamB) {
+          if (resultInfo.winnerId === teamA.id) {
+            winnerTeam = teamA;
+            loserTeam = teamB;
+          } else if (resultInfo.winnerId === teamB.id) {
+            winnerTeam = teamB;
+            loserTeam = teamA;
+          }
+        }
+        qfStates[idx] = { teamA, teamB, resultInfo, winnerTeam, loserTeam };
+      });
+
+      const sfDefs = [
+        { label: "Półfinał 1", fromQF: [0,1] },
+        { label: "Półfinał 2", fromQF: [2,3] }
+      ];
+
+      const sfStates = [];
+
+      sfDefs.forEach((mDef, idx) => {
+        const qf1 = qfStates[mDef.fromQF[0]] || {};
+        const qf2 = qfStates[mDef.fromQF[1]] || {};
+
+        const team1 = qf1.winnerTeam || null;
+        const team2 = qf2.winnerTeam || null;
+
+        const resultInfo = (team1 && team2)
+          ? findMatchResult(team1.id, team2.id, ["semifinal"])
+          : null;
+
+        const card = document.createElement("div");
+        card.className = "match-card";
+
+        const label = document.createElement("div");
+        label.className = "match-label";
+        label.textContent = mDef.label;
+        card.appendChild(label);
+
+        const teamsWrap = document.createElement("div");
+        teamsWrap.className = "match-teams";
+
+        const row1 = document.createElement("div");
+        row1.className = "team-row";
+        const name1 = document.createElement("span");
+        name1.className = "team-name";
+        if (team1) {
+          name1.textContent = team1.name;
+        } else {
+          name1.textContent = "Zwycięzca ćwierćfinału " + (mDef.fromQF[0] + 1);
+          name1.classList.add("team-empty");
+        }
+        row1.appendChild(name1);
+
+        const row2 = document.createElement("div");
+        row2.className = "team-row";
+        const name2 = document.createElement("span");
+        name2.className = "team-name";
+        if (team2) {
+          name2.textContent = team2.name;
+        } else {
+          name2.textContent = "Zwycięzca ćwierćfinału " + (mDef.fromQF[1] + 1);
+          name2.classList.add("team-empty");
+        }
+        row2.appendChild(name2);
+
+        if (team1 && resultInfo && resultInfo.winnerId) {
+          if (resultInfo.winnerId === team1.id) row1.classList.add("winner");
+          else row1.classList.add("loser");
+        }
+        if (team2 && resultInfo && resultInfo.winnerId) {
+          if (resultInfo.winnerId === team2.id) row2.classList.add("winner");
+          else row2.classList.add("loser");
+        }
+
+        teamsWrap.appendChild(row1);
+        teamsWrap.appendChild(row2);
+        card.appendChild(teamsWrap);
+
+        if (team1 && team2 && resultInfo) {
+          const m = resultInfo.match;
+          let aSets, bSets;
+          if (m.teamAId === team1.id && m.teamBId === team2.id) {
+            aSets = m.setsA; bSets = m.setsB;
+          } else if (m.teamAId === team2.id && m.teamBId === team1.id) {
+            aSets = m.setsB; bSets = m.setsA;
+          }
+          if (aSets != null && bSets != null) {
+            const note = document.createElement("div");
+            note.className = "match-note";
+            note.textContent = `Wynik: ${aSets}:${bSets}`;
+            card.appendChild(note);
+          }
+        }
+
+        sfColumn.appendChild(card);
+
+        let winnerTeam = null;
+        let loserTeam = null;
+        if (resultInfo && resultInfo.winnerId && team1 && team2) {
+          if (resultInfo.winnerId === team1.id) {
+            winnerTeam = team1;
+            loserTeam = team2;
+          } else if (resultInfo.winnerId === team2.id) {
+            winnerTeam = team2;
+            loserTeam = team1;
+          }
+        }
+        sfStates[idx] = { team1, team2, resultInfo, winnerTeam, loserTeam };
+      });
+
+      const finalCard = document.createElement("div");
+      finalCard.className = "match-card match-highlight";
+      const finalLabel = document.createElement("div");
+      finalLabel.className = "match-label";
+      finalLabel.textContent = "Finał – mecz o 1. miejsce";
+      finalCard.appendChild(finalLabel);
+
+      const finalTeams = document.createElement("div");
+      finalTeams.className = "match-teams";
+
+      const f1Row = document.createElement("div");
+      f1Row.className = "team-row";
+      const f1Name = document.createElement("span");
+      f1Name.className = "team-name";
+
+      const f2Row = document.createElement("div");
+      f2Row.className = "team-row";
+      const f2Name = document.createElement("span");
+      f2Name.className = "team-name";
+
+      const sf1Winner = sfStates[0]?.winnerTeam || null;
+      const sf2Winner = sfStates[1]?.winnerTeam || null;
+
+      if (sf1Winner) {
+        f1Name.textContent = sf1Winner.name;
+      } else {
+        f1Name.textContent = "Zwycięzca półfinału 1";
+        f1Name.classList.add("team-empty");
+      }
+      if (sf2Winner) {
+        f2Name.textContent = sf2Winner.name;
+      } else {
+        f2Name.textContent = "Zwycięzca półfinału 2";
+        f2Name.classList.add("team-empty");
+      }
+
+      f1Row.appendChild(f1Name);
+      f2Row.appendChild(f2Name);
+      finalTeams.appendChild(f1Row);
+      finalTeams.appendChild(f2Row);
+      finalCard.appendChild(finalTeams);
+
+      let finalResult = null;
+      if (sf1Winner && sf2Winner) {
+        finalResult = findMatchResult(sf1Winner.id, sf2Winner.id, ["final"]);
+      }
+      if (sf1Winner && sf2Winner && finalResult) {
+        const m = finalResult.match;
+        let aSets, bSets;
+        if (m.teamAId === sf1Winner.id && m.teamBId === sf2Winner.id) {
+          aSets = m.setsA; bSets = m.setsB;
+        } else if (m.teamAId === sf2Winner.id && m.teamBId === sf1Winner.id) {
+          aSets = m.setsB; bSets = m.setsA;
+        }
+        if (aSets != null && bSets != null) {
+          if (finalResult.winnerId === sf1Winner.id) {
+            f1Row.classList.add("winner");
+            f2Row.classList.add("loser");
+          } else if (finalResult.winnerId === sf2Winner.id) {
+            f2Row.classList.add("winner");
+            f1Row.classList.add("loser");
+          }
+          const note = document.createElement("div");
+          note.className = "match-note";
+          note.textContent = `Wynik: ${aSets}:${bSets}`;
+          finalCard.appendChild(note);
+        }
+      }
+
+      const finalNote = document.createElement("div");
+      finalNote.className = "match-note";
+      finalNote.textContent = "Zwycięzca: 1. miejsce, przegrany: 2. miejsce";
+      finalCard.appendChild(finalNote);
+
+      const thirdBlock = document.createElement("div");
+      thirdBlock.className = "final-block";
+      const thirdTitle = document.createElement("div");
+      thirdTitle.className = "final-block-title";
+      thirdTitle.textContent = "Mecz o 3. miejsce";
+      thirdBlock.appendChild(thirdTitle);
+
+      const thirdTeams = document.createElement("div");
+      thirdTeams.className = "match-teams";
+
+      const t1Row = document.createElement("div");
+      t1Row.className = "team-row";
+      const t1Name = document.createElement("span");
+      t1Name.className = "team-name";
+
+      const t2Row = document.createElement("div");
+      t2Row.className = "team-row";
+      const t2Name = document.createElement("span");
+      t2Name.className = "team-name";
+
+      const sf1Loser = sfStates[0]?.loserTeam || null;
+      const sf2Loser = sfStates[1]?.loserTeam || null;
+
+      if (sf1Loser) {
+        t1Name.textContent = sf1Loser.name;
+      } else {
+        t1Name.textContent = "Przegrany półfinału 1";
+        t1Name.classList.add("team-empty");
+      }
+      if (sf2Loser) {
+        t2Name.textContent = sf2Loser.name;
+      } else {
+        t2Name.textContent = "Przegrany półfinału 2";
+        t2Name.classList.add("team-empty");
+      }
+
+      t1Row.appendChild(t1Name);
+      t2Row.appendChild(t2Name);
+      thirdTeams.appendChild(t1Row);
+      thirdTeams.appendChild(t2Row);
+      thirdBlock.appendChild(thirdTeams);
+
+      let thirdResult = null;
+      if (sf1Loser && sf2Loser) {
+        thirdResult = findMatchResult(sf1Loser.id, sf2Loser.id, ["thirdplace"]);
+      }
+      if (sf1Loser && sf2Loser && thirdResult) {
+        const m = thirdResult.match;
+        let aSets, bSets;
+        if (m.teamAId === sf1Loser.id && m.teamBId === sf2Loser.id) {
+          aSets = m.setsA; bSets = m.setsB;
+        } else if (m.teamAId === sf2Loser.id && m.teamBId === sf1Loser.id) {
+          aSets = m.setsB; bSets = m.setsA;
+        }
+        if (aSets != null && bSets != null) {
+          if (thirdResult.winnerId === sf1Loser.id) {
+            t1Row.classList.add("winner");
+            t2Row.classList.add("loser");
+          } else if (thirdResult.winnerId === sf2Loser.id) {
+            t2Row.classList.add("winner");
+            t1Row.classList.add("loser");
+          }
+          const note = document.createElement("div");
+          note.className = "match-note";
+          note.textContent = `Wynik: ${aSets}:${bSets}`;
+          thirdBlock.appendChild(note);
+        }
+      }
+
+      finalColumn.appendChild(finalCard);
+      finalColumn.appendChild(thirdBlock);
+
+      const placementDefs = [
+        { label: "Mecz 1 (miejsca 9–12)", seedA: "3B", seedB: "3D" },
+        { label: "Mecz 2 (miejsca 9–12)", seedA: "3A", seedB: "3C" }
+      ];
+
+      placementDefs.forEach(mDef => {
+        const teamA = pos[mDef.seedA];
+        const teamB = pos[mDef.seedB];
+
+        const resultInfo = (teamA && teamB)
+          ? findMatchResult(teamA.id, teamB.id, ["other"])
+          : null;
+
+        const card = document.createElement("div");
+        card.className = "placement-card";
+
+        const lab = document.createElement("div");
+        lab.className = "placement-label";
+        lab.textContent = mDef.label;
+        card.appendChild(lab);
+
+        const teamsWrap = document.createElement("div");
+        teamsWrap.className = "match-teams";
+
+        const rowA = createTeamRow(teamA, mDef.seedA, resultInfo, true);
+        const rowB = createTeamRow(teamB, mDef.seedB, resultInfo, false);
+        teamsWrap.appendChild(rowA);
+        teamsWrap.appendChild(rowB);
+        card.appendChild(teamsWrap);
+
+        const scoreText = getScoreTextForPair(teamA, teamB, resultInfo);
+        if (scoreText) {
+          const note = document.createElement("div");
+          note.className = "match-note";
+          note.textContent = `Wynik: ${scoreText}`;
+          card.appendChild(note);
+        }
+
+        placementGrid.appendChild(card);
+      });
+    }
+
+    loadState();
+    renderBracket();
+
+    window.addEventListener("storage", (event) => {
+      if (event.key !== STORAGE_KEY) return;
+      loadState();
+      renderBracket();
+    });
+  </script>
+</body>
+</html>

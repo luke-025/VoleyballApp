@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Overlay – turniej siatkówki</title>
+  <style>
+    /* --- BAZA --- */
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #020617;
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 8px 24px 0;
+      background: #020617;
+      border-bottom: none;
+    }
+
+    .scene-banner {
+      text-align: center;
+      padding: 4px 0 0;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+      min-height: 20px;
+    }
+
+    main {
+      max-width: 1800px;
+      height: calc(100vh - 8px);
+      margin: 0 auto;
+      padding: 8px 24px 24px;
+      box-sizing: border-box;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+    }
+
+    /* --- SCOREBOARD --- */
+    .scoreboard {
+      grid-column: 1 / span 2;
+      grid-row: 1;
+      width: 1100px;
+      margin: 0 auto;
+      padding: 10px 28px;
+      border-radius: 20px;
+      border: 1px solid #1f2937;
+      background: radial-gradient(circle at top, #111827, #020617 70%);
+      box-shadow:
+        0 18px 40px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(15, 23, 42, 0.9);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .scoreboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .scoreboard-teams {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .team {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      text-align: center;
+      align-items: center;
+    }
+
+    .team-name {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .team-sets {
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    .score-main {
+      text-align: center;
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+      background: rgba(15, 23, 42, 0.9);
+      min-width: 140px;
+      box-shadow: inset 0 0 12px rgba(15, 23, 42, 0.9);
+    }
+
+    .score-main span {
+      font-size: 34px;
+      font-weight: 800;
+      display: inline-block;
+      min-width: 42px;
+    }
+
+    .score-main .separator {
+      font-size: 26px;
+      padding: 0 8px;
+      opacity: 0.8;
+    }
+
+    .set-info {
+      display: none;
+    }
+
+    /* historia setów */
+    .sets-history {
+      margin-top: 4px;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: #e5e7eb;
+    }
+
+    .set-chip {
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+      background: #020617;
+    }
+
+    .set-chip .set-label {
+      font-weight: 600;
+      margin-right: 4px;
+    }
+
+    /* serw */
+    .serve-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      background: transparent;
+      box-shadow: none;
+      transition: 0.2s ease;
+    }
+
+    .serve-indicator.active {
+      background: #ffffff;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+    }
+
+    .team-name.serving span.name-text {
+      border-bottom: 3px solid #38aa33;
+      padding-bottom: 2px;
+    }
+
+    /* --- TABELA (4 GRUPY) --- */
+    .standings {
+      grid-column: 2;
+      grid-row: 2;
+      border-radius: 18px;
+      border: 1px solid #1f2937;
+      background: rgba(2, 6, 23, 0.98);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+      font-size: 12px;
+      max-height: 65vh;
+      overflow: hidden;
+    }
+
+    .standings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .standings-header h2 {
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .standings-groups {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .standings-group h3 {
+      margin: 4px 0;
+      font-size: 14px;
+      color: #e5e7eb;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th, td {
+      padding: 4px 6px;
+      text-align: center;
+    }
+
+    th {
+      background: #111827;
+      color: #9ca3af;
+      font-weight: 500;
+      border-bottom: 1px solid #1f2937;
+    }
+
+    tbody tr:nth-child(even) { background: #020617; }
+    tbody tr:nth-child(odd)  { background: #030712; }
+
+    tbody tr:first-child {
+      outline: 1px solid #38aa33;
+      outline-offset: -1px;
+    }
+
+    td {
+      border-bottom: 1px solid #111827;
+    }
+
+    td.team-name-cell {
+      text-align: left;
+      font-weight: 500;
+    }
+
+    /* --- PANEL WYNIKÓW (PRZERWA) --- */
+    .break-results-panel {
+      grid-column: 1;
+      grid-row: 2;
+      border-radius: 18px;
+      border: 1px solid #1f2937;
+      background: #020617;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+      font-size: 13px;
+    }
+
+    .break-results-panel h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .break-results {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #e5e7eb;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .break-results-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+    }
+
+    .break-results-item span {
+      white-space: nowrap;
+    }
+
+    /* --- BOXY Z LOGO --- */
+    .overlay-logos-row {
+      display: flex;
+      grid-column: 2;
+      grid-row: 3;
+      align-self: start;
+      justify-self: center;
+      width: 100%;
+      gap: 12px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .overlay-logo-box {
+      flex: 1;
+      height: 125px;
+      background: #ffffff;
+      border-radius: 18px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+      padding: 10px 18px;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .overlay-logo-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      gap: 6px;
+    }
+
+    .overlay-logo-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #111827;
+      text-align: center;
+    }
+
+    .overlay-logo-box img {
+      max-width: 100%;
+      max-height: 70%;
+      object-fit: contain;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    /* --- TEKST NA SCENIE TECHNICZNEJ --- */
+    .scene-overlay-message {
+      position: absolute;
+      left: 50%;
+      top: 55%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      font-size: 32px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #e5e7eb;
+      text-shadow: 0 8px 20px rgba(0,0,0,0.8);
+      pointer-events: none;
+      padding: 8px 16px;
+      display: none;
+    }
+
+    /* --- SCENY --- */
+
+    /* domyślnie: mecz (game) – scoreboard + tabela + loga */
+    body[data-scene="game"] .break-results-panel {
+      display: none;
+    }
+    body[data-scene="game"] .scene-overlay-message {
+      display: none;
+    }
+
+    /* PRZERWA – tabela + wyniki */
+    body[data-scene="break"] .scoreboard {
+      display: none;
+    }
+    body[data-scene="break"] main {
+      grid-template-columns: 1.2fr 1.8fr;
+      grid-template-rows: auto 1fr auto;
+    }
+    body[data-scene="break"] .overlay-logos-row {
+      grid-column: 1 / span 2;
+      grid-row: 3;
+      margin-top: 24px;
+    }
+    body[data-scene="break"] .break-results-panel,
+    body[data-scene="break"] .standings {
+      height: 100%;
+      max-height: none;
+      align-self: stretch;
+    }
+
+    /* KONIEC MECZU – tylko wynik + loga */
+    body[data-scene="final"] .standings,
+    body[data-scene="final"] .break-results-panel {
+      display: none;
+    }
+    body[data-scene="final"] .scoreboard {
+      grid-column: 1 / span 2;
+      grid-row: 2;
+      margin-top: 40px;
+      width: 900px;
+    }
+    body[data-scene="final"] .scoreboard-header {
+      justify-content: center;
+    }
+    body[data-scene="final"] .sets-history {
+      margin-top: 12px;
+    }
+    body[data-scene="final"] .set-chip {
+      font-size: 16px;
+      padding: 6px 12px;
+    }
+    body[data-scene="final"] .overlay-logos-row {
+      grid-column: 1 / span 2;
+      grid-row: 3;
+      justify-content: center;
+    }
+    body[data-scene="final"] .scene-overlay-message {
+      display: none;
+    }
+
+    /* PRZERWA TECHNICZNA – tylko napis + loga */
+    body[data-scene="technical"] .scoreboard,
+    body[data-scene="technical"] .standings,
+    body[data-scene="technical"] .break-results-panel {
+      display: none;
+    }
+    body[data-scene="technical"] main {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr auto;
+    }
+    body[data-scene="technical"] .overlay-logos-row {
+      grid-column: 1;
+      grid-row: 2;
+      width: 1100px;
+      max-width: 1100px;
+      margin: 0 auto 40px;
+      justify-content: center;
+    }
+    body[data-scene="technical"] .scene-overlay-message {
+      display: block;
+    }
+
+    /* wspólna szerokość w 3 scenach z logotypami na dole */
+    body[data-scene="break"] .overlay-logos-row,
+    body[data-scene="final"] .overlay-logos-row,
+    body[data-scene="technical"] .overlay-logos-row {
+      max-width: 1100px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div id="sceneBanner" class="scene-banner"></div>
+  </header>
+
+  <main>
+    <!-- SCOREBOARD (używany w game + final) -->
+    <section class="scoreboard">
+      <div class="scoreboard-header">
+        <div>Mecz: <span id="matchLabel">–</span></div>
+        <div>Set: <span id="currentSet">1</span> (gramy do 2 wygranych setów)</div>
+      </div>
+      <div class="scoreboard-teams">
+        <div class="team">
+          <div class="team-name" id="teamANameBox">
+            <span class="serve-indicator" id="serveA"></span>
+            <span class="name-text" id="teamAName">Drużyna A</span>
+          </div>
+          <div class="team-sets">Sety: <span id="teamASets">0</span></div>
+        </div>
+        <div class="score-main" id="scoreMain">
+          <span id="teamAPoints">0</span>
+          <span class="separator">:</span>
+          <span id="teamBPoints">0</span>
+        </div>
+        <div class="team">
+          <div class="team-name" id="teamBNameBox">
+            <span class="serve-indicator" id="serveB"></span>
+            <span class="name-text" id="teamBName">Drużyna B</span>
+          </div>
+          <div class="team-sets">Sety: <span id="teamBSets">0</span></div>
+        </div>
+      </div>
+      <div class="sets-history" id="setsHistory"></div>
+    </section>
+
+    <!-- PANEL WYNIKÓW (przerwa) -->
+    <section class="break-results-panel" id="breakResultsPanel">
+      <h2>Wyniki meczów</h2>
+      <div class="break-results" id="breakResults"></div>
+    </section>
+
+    <!-- TABELA – 4 GRUPY -->
+    <section class="standings">
+      <div class="standings-header">
+        <h2>Tabele grupowe</h2>
+        <span class="small-text">
+          Punktacja: 2:0 → 3 pkt, 2:1 → 2 pkt, 1:2 → 1 pkt, 0:2 → 0 pkt
+        </span>
+      </div>
+      <div class="standings-groups">
+        <div class="standings-group">
+          <h3>Grupa A</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Drużyna</th>
+                <th>M</th>
+                <th>W</th>
+                <th>P</th>
+                <th>Sety +</th>
+                <th>Sety –</th>
+                <th>Pkt +</th>
+                <th>Pkt –</th>
+                <th>Punkty</th>
+              </tr>
+            </thead>
+            <tbody id="standingsBodyA"></tbody>
+          </table>
+        </div>
+        <div class="standings-group">
+          <h3>Grupa B</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Drużyna</th>
+                <th>M</th>
+                <th>W</th>
+                <th>P</th>
+                <th>Sety +</th>
+                <th>Sety –</th>
+                <th>Pkt +</th>
+                <th>Pkt –</th>
+                <th>Punkty</th>
+              </tr>
+            </thead>
+            <tbody id="standingsBodyB"></tbody>
+          </table>
+        </div>
+        <div class="standings-group">
+          <h3>Grupa C</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Drużyna</th>
+                <th>M</th>
+                <th>W</th>
+                <th>P</th>
+                <th>Sety +</th>
+                <th>Sety –</th>
+                <th>Pkt +</th>
+                <th>Pkt –</th>
+                <th>Punkty</th>
+              </tr>
+            </thead>
+            <tbody id="standingsBodyC"></tbody>
+          </table>
+        </div>
+        <div class="standings-group">
+          <h3>Grupa D</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Drużyna</th>
+                <th>M</th>
+                <th>W</th>
+                <th>P</th>
+                <th>Sety +</th>
+                <th>Sety –</th>
+                <th>Pkt +</th>
+                <th>Pkt –</th>
+                <th>Punkty</th>
+              </tr>
+            </thead>
+            <tbody id="standingsBodyD"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- BOXY Z LOGO -->
+    <div class="overlay-logos-row">
+      <div class="overlay-logo-box" id="sponsorsBox">
+        <div class="overlay-logo-inner">
+          <div class="overlay-logo-label">Sponsorzy i partnerzy</div>
+          <img id="overlayLogo" alt="Sponsor / partner" />
+        </div>
+      </div>
+      <div class="overlay-logo-box" id="organizersBox">
+        <div class="overlay-logo-inner">
+          <div class="overlay-logo-label">Organizatorzy wydarzenia</div>
+          <img id="overlayOrganizerLogo" alt="Organizator wydarzenia" />
+        </div>
+      </div>
+    </div>
+
+    <div id="sceneOverlayMessage" class="scene-overlay-message"></div>
+  </main>
+
+  <script>
+    /* --- KONFIG I STAN (taki sam STORAGE_KEY jak w index.html) --- */
+    const STORAGE_KEY = "volley_tournament_state_v1";
+    const LOGO_MAX_INDEX = 20;
+    const LOGO_ROTATION_MS = 5000;
+    const ORGANIZER_ROTATION_MS = 7000;
+    const ORGANIZER_LOGOS = ["MR Energy.png", "Tytani.png"];
+
+    // te same drużyny + grupy jak w index.html
+    const initialTeams = [
+      { name: "Asy Mikasy", group: "A" },
+      { name: "Tartak Siemianówka", group: "A" },
+      { name: "SGA Trans-Ber", group: "A" },
+      { name: "Rojal Flasz", group: "B" },
+      { name: "Meridan Team", group: "B" },
+      { name: "Torpeda Białystok", group: "B" },
+      { name: "Sparta Łosice", group: "C" },
+      { name: "Golden Crew", group: "C" },
+      { name: "MR Energy", group: "C" },
+      { name: "Global East", group: "D" },
+      { name: "KZS Białystok", group: "D" },
+      { name: "Kometa", group: "D" }
+    ];
+
+    let teams = [];
+    let matchesHistory = [];
+    let currentMatch = {
+      teamAId: null,
+      teamBId: null,
+      setA: 0,
+      setB: 0,
+      pointsA: 0,
+      pointsB: 0,
+      currentSet: 1,
+      setsHistory: []
+    };
+    let sponsors = [];
+    let lastPointWinner = null;
+
+    let logoFiles = [];
+    let logosRotationIndex = 0;
+    let logosRotationTimer = null;
+
+    let organizerFiles = [];
+    let organizerIndex = 0;
+    let organizerTimer = null;
+
+    /* --- pomocnicze --- */
+    function getParam(name, def = null) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        return params.get(name) || def;
+      } catch {
+        return def;
+      }
+    }
+
+    const scene = getParam("scene", "game"); // game / break / final / technical
+    document.body.setAttribute("data-scene", scene);
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+
+        if (Array.isArray(parsed.teams)) {
+          teams = parsed.teams;
+
+          // jeśli stare dane bez pola group – uzupełnij na podstawie initialTeams
+          if (teams.length && !teams[0].hasOwnProperty("group")) {
+            teams.forEach((t, i) => {
+              const tpl = initialTeams[i];
+              t.group = tpl ? tpl.group : "";
+            });
+          }
+        }
+        if (Array.isArray(parsed.matchesHistory)) matchesHistory = parsed.matchesHistory;
+        if (parsed.currentMatch) currentMatch = parsed.currentMatch;
+        if (Array.isArray(parsed.sponsors)) sponsors = parsed.sponsors;
+        if (parsed.lastPointWinner) lastPointWinner = parsed.lastPointWinner;
+      } catch (e) {
+        console.warn("Błąd odczytu stanu w overlay:", e);
+      }
+    }
+
+    /* --- render banner --- */
+    function renderSceneBanner() {
+      const banner = document.getElementById("sceneBanner");
+      let text = "";
+      switch (scene) {
+        case "break":
+          text = "Aktualna tabela i wyniki meczów";
+          break;
+        case "final":
+          text = "Koniec meczu – wynik końcowy";
+          break;
+        case "technical":
+          text = "Przerwa techniczna – zaraz wracamy";
+          break;
+        default:
+          text = "";
+      }
+      banner.textContent = text;
+      const msgEl = document.getElementById("sceneOverlayMessage");
+      if (msgEl) {
+        msgEl.textContent = scene === "technical"
+          ? "Przerwa techniczna – zaraz wracamy"
+          : "";
+      }
+    }
+
+    /* --- render scoreboard --- */
+    function renderScoreboard() {
+      const teamANameEl = document.getElementById("teamAName");
+      const teamBNameEl = document.getElementById("teamBName");
+      const teamASetsEl = document.getElementById("teamASets");
+      const teamBSetsEl = document.getElementById("teamBSets");
+      const teamAPointsEl = document.getElementById("teamAPoints");
+      const teamBPointsEl = document.getElementById("teamBPoints");
+      const matchLabelEl = document.getElementById("matchLabel");
+      const currentSetEl = document.getElementById("currentSet");
+      const historyEl = document.getElementById("setsHistory");
+
+      const teamA = teams.find(t => t.id === currentMatch.teamAId);
+      const teamB = teams.find(t => t.id === currentMatch.teamBId);
+
+      teamANameEl.textContent = teamA ? teamA.name : "Drużyna A";
+      teamBNameEl.textContent = teamB ? teamB.name : "Drużyna B";
+
+      teamASetsEl.textContent = currentMatch.setA;
+      teamBSetsEl.textContent = currentMatch.setB;
+      teamAPointsEl.textContent = currentMatch.pointsA;
+      teamBPointsEl.textContent = currentMatch.pointsB;
+
+      matchLabelEl.textContent = (teamA && teamB)
+        ? `${teamA.name} vs ${teamB.name}`
+        : "–";
+
+      currentSetEl.textContent = currentMatch.currentSet;
+
+      historyEl.innerHTML = "";
+      currentMatch.setsHistory.forEach(set => {
+        const chip = document.createElement("div");
+        chip.className = "set-chip";
+        chip.innerHTML = `<span class="set-label">Set ${set.number}:</span>${set.a} : ${set.b}`;
+        historyEl.appendChild(chip);
+      });
+
+      const serveA = document.getElementById("serveA");
+      const serveB = document.getElementById("serveB");
+      const teamANameBox = document.getElementById("teamANameBox");
+      const teamBNameBox = document.getElementById("teamBNameBox");
+
+      serveA.classList.remove("active");
+      serveB.classList.remove("active");
+      teamANameBox.classList.remove("serving");
+      teamBNameBox.classList.remove("serving");
+
+      if (lastPointWinner === "A") {
+        serveA.classList.add("active");
+        teamANameBox.classList.add("serving");
+      } else if (lastPointWinner === "B") {
+        serveB.classList.add("active");
+        teamBNameBox.classList.add("serving");
+      }
+    }
+
+    /* --- wyniki do przerwy --- */
+    function renderBreakResults() {
+      const container = document.getElementById("breakResults");
+      if (!container) return;
+
+      if (!matchesHistory.length) {
+        container.innerHTML = '<div class="small-text">Brak zakończonych meczów.</div>';
+        return;
+      }
+
+      container.innerHTML = "";
+      const history = [...matchesHistory].slice().reverse();
+      history.forEach(match => {
+        const teamA = teams.find(t => t.id === match.teamAId);
+        const teamB = teams.find(t => t.id === match.teamBId);
+        const nameA = teamA ? teamA.name : "Drużyna A";
+        const nameB = teamB ? teamB.name : "Drużyna B";
+
+        const stageLabel = match.stage && match.stage !== "group"
+          ? ` (${match.stage})`
+          : "";
+
+        const row = document.createElement("div");
+        row.className = "break-results-item";
+        row.innerHTML = `<span>${nameA} vs ${nameB}${stageLabel}</span><span>${match.setsA}:${match.setsB}</span>`;
+        container.appendChild(row);
+      });
+    }
+
+    /* --- tabela --- */
+    function getHeadToHeadWinner(teamId1, teamId2) {
+      const relevantMatches = matchesHistory.filter(
+        m =>
+          (!m.stage || m.stage === "group") &&
+          (
+            (m.teamAId === teamId1 && m.teamBId === teamId2) ||
+            (m.teamAId === teamId2 && m.teamBId === teamId1)
+          )
+      );
+      if (!relevantMatches.length) return null;
+
+      let wins1 = 0, wins2 = 0;
+      relevantMatches.forEach(m => {
+        if (m.setsA > m.setsB) {
+          if (m.teamAId === teamId1) wins1++; else wins2++;
+        } else if (m.setsB > m.setsA) {
+          if (m.teamBId === teamId1) wins1++; else wins2++;
+        }
+      });
+      if (wins1 > wins2) return teamId1;
+      if (wins2 > wins1) return teamId2;
+      return null;
+    }
+
+    function compareTeams(a, b) {
+      if (b.tablePoints !== a.tablePoints) return b.tablePoints - a.tablePoints;
+      const h2hWinner = getHeadToHeadWinner(a.id, b.id);
+      if (h2hWinner === a.id) return -1;
+      if (h2hWinner === b.id) return 1;
+
+      const diffA = a.setsWon - a.setsLost;
+      const diffB = b.setsWon - b.setsLost;
+      if (diffB !== diffA) return diffB - diffA;
+
+      const ratioA = a.pointsAgainst === 0 ? a.pointsFor : a.pointsFor / a.pointsAgainst;
+      const ratioB = b.pointsAgainst === 0 ? b.pointsFor : b.pointsFor / b.pointsAgainst;
+      if (ratioB !== ratioA) return ratioB - ratioA;
+
+      return a.name.localeCompare(b.name, "pl");
+    }
+
+    function renderStandings() {
+      const bodies = {
+        A: document.getElementById("standingsBodyA"),
+        B: document.getElementById("standingsBodyB"),
+        C: document.getElementById("standingsBodyC"),
+        D: document.getElementById("standingsBodyD"),
+      };
+
+      ["A", "B", "C", "D"].forEach(group => {
+        const tbody = bodies[group];
+        if (!tbody) return;
+        tbody.innerHTML = "";
+
+        const groupTeams = teams.filter(t => t.group === group);
+        const sortedTeams = [...groupTeams].sort(compareTeams);
+
+        sortedTeams.forEach((team, index) => {
+          const row = document.createElement("tr");
+
+          const posTd = document.createElement("td");
+          posTd.textContent = index + 1;
+          row.appendChild(posTd);
+
+          const nameTd = document.createElement("td");
+          nameTd.textContent = team.name;
+          nameTd.classList.add("team-name-cell");
+          row.appendChild(nameTd);
+
+          const playedTd = document.createElement("td");
+          playedTd.textContent = team.played;
+          row.appendChild(playedTd);
+
+          const wonTd = document.createElement("td");
+          wonTd.textContent = team.won;
+          row.appendChild(wonTd);
+
+          const lostTd = document.createElement("td");
+          lostTd.textContent = team.lost;
+          row.appendChild(lostTd);
+
+          const setsWonTd = document.createElement("td");
+          setsWonTd.textContent = team.setsWon;
+          row.appendChild(setsWonTd);
+
+          const setsLostTd = document.createElement("td");
+          setsLostTd.textContent = team.setsLost;
+          row.appendChild(setsLostTd);
+
+          const pointsForTd = document.createElement("td");
+          pointsForTd.textContent = team.pointsFor;
+          row.appendChild(pointsForTd);
+
+          const pointsAgainstTd = document.createElement("td");
+          pointsAgainstTd.textContent = team.pointsAgainst;
+          row.appendChild(pointsAgainstTd);
+
+          const tablePointsTd = document.createElement("td");
+          tablePointsTd.textContent = team.tablePoints;
+          row.appendChild(tablePointsTd);
+
+          tbody.appendChild(row);
+        });
+      });
+    }
+
+    /* --- rotacja logo sponsorów (logo1.png...) --- */
+    function detectLogoFiles(callback) {
+      logoFiles = [];
+      let remaining = LOGO_MAX_INDEX;
+      if (!remaining) { callback && callback(); return; }
+
+      for (let i = 1; i <= LOGO_MAX_INDEX; i++) {
+        const src = `logo${i}.png`;
+        const img = new Image();
+        img.onload = () => { logoFiles.push(src); checkDone(); };
+        img.onerror = () => { checkDone(); };
+        img.src = src;
+      }
+      function checkDone() {
+        if (--remaining === 0 && callback) callback();
+      }
+    }
+
+    function startOverlayLogoRotation() {
+      const imgEl = document.getElementById("overlayLogo");
+      if (!imgEl) return;
+      if (!logoFiles.length) {
+        imgEl.style.opacity = 0;
+        return;
+      }
+      if (logosRotationTimer) clearInterval(logosRotationTimer);
+
+      const showNext = () => {
+        imgEl.style.opacity = 0;
+        const src = logoFiles[logosRotationIndex];
+        logosRotationIndex = (logosRotationIndex + 1) % logoFiles.length;
+        setTimeout(() => {
+          imgEl.src = src;
+          imgEl.onload = () => { imgEl.style.opacity = 1; };
+        }, 200);
+      };
+      showNext();
+      logosRotationTimer = setInterval(showNext, LOGO_ROTATION_MS);
+    }
+
+    /* --- rotacja logo organizatorów --- */
+    function detectOrganizerFiles(callback) {
+      organizerFiles = [];
+      let remaining = ORGANIZER_LOGOS.length;
+      if (!remaining) { callback && callback(); return; }
+
+      ORGANIZER_LOGOS.forEach(src => {
+        const img = new Image();
+        img.onload = () => { organizerFiles.push(src); checkDone(); };
+        img.onerror = () => { checkDone(); };
+        img.src = src;
+      });
+      function checkDone() {
+        if (--remaining === 0 && callback) callback();
+      }
+    }
+
+    function startOrganizerRotation() {
+      const imgEl = document.getElementById("overlayOrganizerLogo");
+      if (!imgEl) return;
+      if (!organizerFiles.length) {
+        imgEl.style.opacity = 0;
+        return;
+      }
+      if (organizerTimer) clearInterval(organizerTimer);
+
+      const showNext = () => {
+        imgEl.style.opacity = 0;
+        const src = organizerFiles[organizerIndex];
+        organizerIndex = (organizerIndex + 1) % organizerFiles.length;
+        setTimeout(() => {
+          imgEl.src = src;
+          imgEl.onload = () => { imgEl.style.opacity = 1; };
+        }, 200);
+      };
+      showNext();
+      organizerTimer = setInterval(showNext, ORGANIZER_ROTATION_MS);
+    }
+
+    /* --- INIT --- */
+    loadState();
+    renderSceneBanner();
+    renderScoreboard();
+    renderStandings();
+    renderBreakResults();
+    detectLogoFiles(startOverlayLogoRotation);
+    detectOrganizerFiles(startOrganizerRotation);
+
+    /* gdy panel zapisze nowy stan – zaktualizuj overlay */
+    window.addEventListener("storage", (event) => {
+      if (event.key !== STORAGE_KEY) return;
+      loadState();
+      renderScoreboard();
+      renderStandings();
+      renderBreakResults();
+    });
+  </script>
+</body>
+</html>
