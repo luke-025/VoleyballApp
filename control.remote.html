@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Volleyball Control</title>
+  <style>
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b0f19;color:#e6e9f2}
+    a{color:#7fb6ff}
+    .top{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center}
+    .top h1{font-size:16px;margin:0}
+    .badge{font-size:12px;opacity:.85}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px}
+    .card{background:#121a2b;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px}
+    .card h2{font-size:13px;margin:0 0 10px 0;opacity:.9}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    input,select,button{background:#0b1222;color:#e6e9f2;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;font-size:14px}
+    button{cursor:pointer}
+    button.primary{background:#1b3b7a;border-color:#2a5bd6}
+    button.good{background:#1b5a3a;border-color:#2ecb7c}
+    button.warn{background:#5a3a1b;border-color:#ffb85c}
+    button.danger{background:#5a1b1b;border-color:#ff6b6b}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left}
+    .muted{opacity:.7}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    .full{grid-column:1/-1}
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div>
+      <h1>Volleyball Control</h1>
+      <div class="badge" id="sub">—</div>
+    </div>
+    <div class="row">
+      <span class="muted">Turniej:</span>
+      <span class="mono" id="slug">—</span>
+      <button id="btnPin" class="primary">Ustaw PIN</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Dodaj drużynę</h2>
+      <div class="row">
+        <input id="teamName" placeholder="Nazwa" />
+        <select id="teamGroup"></select>
+        <button class="good" id="addTeam">Dodaj</button>
+      </div>
+      <div class="muted" style="margin-top:8px">Grupy nie muszą być stałe – możesz dopisać inne litery w kodzie albo w przyszłości zrobić dynamiczne.</div>
+    </div>
+
+    <div class="card">
+      <h2>Mecz główny (PROGRAM) – do transmisji</h2>
+      <div class="row">
+        <select id="programMatch"></select>
+        <button class="primary" id="setProgram">Ustaw</button>
+        <a id="overlayLink" href="#" target="_blank">Otwórz overlay</a>
+      </div>
+      <div class="muted" style="margin-top:8px">Overlay jest publiczny (bez PIN).</div>
+    </div>
+
+    <div class="card full">
+      <h2>Mecze (filtr)</h2>
+      <div class="row" style="margin-bottom:10px">
+        <select id="filterStage"></select>
+        <select id="filterGroup"></select>
+        <button id="newMatch" class="good">+ Dodaj mecz</button>
+        <button id="save" class="primary">Zapisz zmiany</button>
+        <span id="saveStatus" class="muted"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Etap</th>
+            <th>Grupa</th>
+            <th>Drużyna A</th>
+            <th>Drużyna B</th>
+            <th>Status</th>
+            <th>Wynik (sety)</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="matches"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="/vb-config.js"></script>
+  <script src="/vb-ui-shared.js"></script>
+  <script src="/vb-rules.js"></script>
+  <script src="/vb-store.js"></script>
+  <script>
+    const els = (id) => document.getElementById(id);
+    const slug = VB_UI.getTournamentSlug();
+    els('slug').textContent = slug;
+
+    function stageOptions(sel){
+      sel.innerHTML = '';
+      for (const s of VB_CONFIG.STAGES){
+        const o = document.createElement('option');
+        o.value = s.key;
+        o.textContent = s.label;
+        sel.appendChild(o);
+      }
+    }
+
+    function groupOptions(sel){
+      sel.innerHTML = '';
+      const all = document.createElement('option');
+      all.value = 'ALL';
+      all.textContent = 'Wszystkie grupy';
+      sel.appendChild(all);
+      for (const g of VB_CONFIG.GROUPS){
+        const o = document.createElement('option');
+        o.value = g;
+        o.textContent = 'Grupa ' + g;
+        sel.appendChild(o);
+      }
+    }
+
+    // init selects
+    stageOptions(els('filterStage'));
+    groupOptions(els('filterGroup'));
+    // add team group select
+    els('teamGroup').innerHTML = VB_CONFIG.GROUPS.map(g => `<option value="${g}">${g}</option>`).join('');
+
+    function ensurePin(){
+      let pin = VB_Store.getPin(slug);
+      if (!pin){
+        pin = prompt('Wpisz PIN turnieju (do kontroli):');
+        if (!pin) return false;
+        VB_Store.setPin(slug, pin);
+      }
+      return true;
+    }
+
+    async function bootstrap(){
+      try {
+        await VB_Store.loadState(slug);
+      } catch (e) {
+        // If tournament does not exist, allow create.
+        console.warn(e);
+        if (!confirm('Turniej o tym identyfikatorze nie istnieje. Utworzyć nowy?')) return;
+        const pin = prompt('Ustaw PIN dla nowego turnieju:');
+        if (!pin) return;
+        VB_Store.setPin(slug, pin);
+        const initState = VB_Rules.ensureStateShape({});
+        await VB_Store.ensureTournament(slug, pin, initState);
+        await VB_Store.loadState(slug);
+      }
+
+      VB_Store.subscribe(({state}) => {
+        render(state);
+        els('saveStatus').textContent = 'Zaktualizowano z sieci';
+        setTimeout(()=>els('saveStatus').textContent='', 1200);
+      });
+
+      render(VB_Store.getCurrent().state);
+      els('sub').textContent = 'Połączono • urządzenie: ' + VB_Store.getDeviceId();
+      els('overlayLink').href = `/overlay.remote.html?t=${encodeURIComponent(slug)}`;
+    }
+
+    function render(state){
+      state = VB_Rules.ensureStateShape(state);
+      // program match selector
+      const pm = els('programMatch');
+      pm.innerHTML = '';
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = '— brak —';
+      pm.appendChild(empty);
+      for (const m of state.matches){
+        const o = document.createElement('option');
+        o.value = m.id;
+        const t1 = state.teams.find(t => t.id===m.team1Id)?.name || 'A';
+        const t2 = state.teams.find(t => t.id===m.team2Id)?.name || 'B';
+        o.textContent = `${VB_UI.stageLabel(m.stage)}${m.stage==='group'&&m.group?(' G'+m.group):''}: ${t1} vs ${t2}`;
+        if (state.programMatchId === m.id) o.selected = true;
+        pm.appendChild(o);
+      }
+
+      // matches table
+      const stage = els('filterStage').value;
+      const group = els('filterGroup').value;
+      const tbody = els('matches');
+      tbody.innerHTML = '';
+
+      const filtered = state.matches.filter(m => {
+        if (stage && m.stage !== stage) return false;
+        if (m.stage === 'group' && group !== 'ALL' && group && m.group !== group) return false;
+        return true;
+      });
+
+      for (const m of filtered){
+        const tr = document.createElement('tr');
+        const t1 = state.teams.find(t => t.id===m.team1Id)?.name || '—';
+        const t2 = state.teams.find(t => t.id===m.team2Id)?.name || '—';
+        const sets = `${m.aSets ?? 0}:${m.bSets ?? 0}`;
+        tr.innerHTML = `
+          <td>${VB_UI.stageLabel(m.stage)}</td>
+          <td>${m.stage==='group' ? (m.group||'') : ''}</td>
+          <td>${VB_UI.esc(t1)}</td>
+          <td>${VB_UI.esc(t2)}</td>
+          <td><span class="mono">${m.status}</span>${m.claimedBy?`<br><span class="muted">claimed: ${m.claimedBy}</span>`:''}</td>
+          <td class="mono">${sets}</td>
+          <td><button class="danger" data-del="${m.id}">Usuń</button></td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      tbody.querySelectorAll('button[data-del]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!ensurePin()) return;
+          const id = btn.getAttribute('data-del');
+          if (!confirm('Usunąć mecz?')) return;
+          const st = structuredClone(VB_Store.getCurrent().state);
+          st.matches = st.matches.filter(x => x.id !== id);
+          if (st.programMatchId === id) st.programMatchId = null;
+          VB_Store.updateState(st).then(r => {
+            if (!r.ok && r.conflict) render(r.state);
+          }).catch(console.error);
+        });
+      });
+    }
+
+    els('btnPin').addEventListener('click', () => {
+      const pin = prompt('Ustaw PIN (zapisze się tylko w tej karcie):', VB_Store.getPin(slug) || '');
+      if (pin) VB_Store.setPin(slug, pin);
+    });
+
+    els('addTeam').addEventListener('click', async () => {
+      if (!ensurePin()) return;
+      const name = els('teamName').value.trim();
+      if (!name) return;
+      const group = els('teamGroup').value;
+      const st = structuredClone(VB_Store.getCurrent().state);
+      st.teams.push({ id: 't_' + Math.random().toString(36).slice(2), name, group });
+      els('teamName').value = '';
+      const r = await VB_Store.updateState(st);
+      if (!r.ok && r.conflict) render(r.state);
+    });
+
+    els('newMatch').addEventListener('click', async () => {
+      if (!ensurePin()) return;
+      const st = structuredClone(VB_Store.getCurrent().state);
+      if (st.teams.length < 2) return alert('Dodaj najpierw drużyny');
+
+      const stage = els('filterStage').value;
+      const group = stage==='group' ? (els('filterGroup').value==='ALL' ? VB_CONFIG.GROUPS[0] : els('filterGroup').value) : null;
+
+      const team1Id = st.teams[0].id;
+      const team2Id = st.teams[1].id;
+      const m = VB_Rules.createMatch({ stage, group, team1Id, team2Id });
+      st.matches.push(m);
+      const r = await VB_Store.updateState(st);
+      if (!r.ok && r.conflict) render(r.state);
+    });
+
+    els('setProgram').addEventListener('click', async () => {
+      if (!ensurePin()) return;
+      const st = structuredClone(VB_Store.getCurrent().state);
+      st.programMatchId = els('programMatch').value || null;
+      const r = await VB_Store.updateState(st);
+      if (!r.ok && r.conflict) render(r.state);
+    });
+
+    els('save').addEventListener('click', async () => {
+      if (!ensurePin()) return;
+      // For now: save current state (if you've edited via other UI parts)
+      const r = await VB_Store.updateState(VB_Store.getCurrent().state);
+      els('saveStatus').textContent = r.ok ? 'Zapisano' : (r.conflict ? 'Konflikt – odświeżono' : 'Błąd zapisu');
+    });
+
+    bootstrap();
+  </script>
+</body>
+</html>

@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Boisko</title>
+  <style>
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b0f19;color:#e6e9f2}
+    .top{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .top h1{font-size:16px;margin:0}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    select,input,button{background:#0b1222;color:#e6e9f2;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 14px;font-size:16px}
+    button{cursor:pointer}
+    button.primary{background:#1b3b7a;border-color:#2a5bd6}
+    button.good{background:#1b5a3a;border-color:#2ecb7c}
+    button.warn{background:#5a3a1b;border-color:#ffb85c}
+    button.danger{background:#5a1b1b;border-color:#ff6b6b}
+    .wrap{padding:12px}
+    .card{background:#121a2b;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px;margin-bottom:12px}
+    .muted{opacity:.7}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    .list button{width:100%;text-align:left;padding:12px 12px;border-radius:14px;margin-top:8px}
+    .scoreGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .teamBox{background:#0b1222;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:12px}
+    .teamName{font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .big{font-size:56px;font-weight:900;line-height:1;margin:10px 0}
+    .sets{font-size:16px;opacity:.85}
+    .btnRow{display:flex;gap:10px}
+    .btnRow button{flex:1;font-size:22px;padding:14px}
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div>
+      <h1>Panel boiska</h1>
+      <div class="muted" id="sub">—</div>
+    </div>
+    <div class="row">
+      <span class="muted">Turniej:</span>
+      <span class="mono" id="slug">—</span>
+      <button id="btnPin" class="primary">PIN</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="row">
+        <select id="stage"></select>
+        <select id="group"></select>
+        <button id="refresh" class="primary">Odśwież</button>
+      </div>
+      <div class="muted" style="margin-top:8px">Pokażę tylko mecze z wybranego etapu/grupy.</div>
+    </div>
+
+    <div class="card" id="pick">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <div style="font-weight:700">Wybierz mecz do obsługi</div>
+          <div class="muted" id="pickHint"></div>
+        </div>
+        <button id="release" class="warn" style="display:none">Zwolnij mecz</button>
+      </div>
+      <div class="list" id="matchList"></div>
+    </div>
+
+    <div class="card" id="live" style="display:none">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <div class="muted" id="liveMeta"></div>
+          <div style="font-weight:800;font-size:18px" id="liveTitle"></div>
+        </div>
+        <button id="confirm" class="good" style="display:none">Zatwierdź wynik</button>
+      </div>
+
+      <div class="scoreGrid" style="margin-top:12px">
+        <div class="teamBox">
+          <div class="teamName" id="aName">A</div>
+          <div class="sets">Sety: <span class="mono" id="aSets">0</span></div>
+          <div class="big" id="aPts">0</div>
+          <div class="btnRow">
+            <button class="good" id="aPlus">+1</button>
+            <button class="danger" id="aMinus">-1</button>
+          </div>
+        </div>
+        <div class="teamBox">
+          <div class="teamName" id="bName">B</div>
+          <div class="sets">Sety: <span class="mono" id="bSets">0</span></div>
+          <div class="big" id="bPts">0</div>
+          <div class="btnRow">
+            <button class="good" id="bPlus">+1</button>
+            <button class="danger" id="bMinus">-1</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="muted" style="margin-top:10px">
+        Skróty klawiszowe: Q/W (A +1/-1), O/P (B +1/-1)
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="/vb-config.js"></script>
+  <script src="/vb-ui-shared.js"></script>
+  <script src="/vb-rules.js"></script>
+  <script src="/vb-store.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const slug = VB_UI.getTournamentSlug();
+    $('slug').textContent = slug;
+
+    const deviceId = VB_Store.getDeviceId();
+    $('sub').textContent = 'Urządzenie: ' + deviceId;
+
+    function ensurePin(){
+      let pin = VB_Store.getPin(slug);
+      if (!pin){
+        pin = prompt('PIN turnieju (do obsługi meczów):');
+        if (!pin) return false;
+        VB_Store.setPin(slug, pin);
+      }
+      return true;
+    }
+
+    function fillStages(){
+      $('stage').innerHTML = VB_CONFIG.STAGES.map(s => `<option value="${s.key}">${s.label}</option>`).join('');
+    }
+
+    function fillGroups(show){
+      $('group').style.display = show ? 'inline-block' : 'none';
+      if (!show) return;
+      $('group').innerHTML = VB_CONFIG.GROUPS.map(g => `<option value="${g}">Grupa ${g}</option>`).join('');
+    }
+
+    let selectedMatchId = null;
+
+    function getFilteredMatches(state){
+      const stage = $('stage').value;
+      const group = $('group').value;
+      return state.matches.filter(m => {
+        if (m.stage !== stage) return false;
+        if (stage === 'group' && m.group !== group) return false;
+        return m.status !== 'confirmed';
+      });
+    }
+
+    function renderPicker(state){
+      state = VB_Rules.ensureStateShape(state);
+      const teamsById = new Map(state.teams.map(t => [t.id, t]));
+      const list = $('matchList');
+      list.innerHTML = '';
+
+      const stage = $('stage').value;
+      if (stage === 'group') $('pickHint').textContent = `Grupa ${$('group').value}`;
+      else $('pickHint').textContent = VB_UI.stageLabel(stage);
+
+      const matches = getFilteredMatches(state);
+      if (!matches.length){
+        list.innerHTML = `<div class="muted">Brak meczów w tym filtrze.</div>`;
+        return;
+      }
+
+      for (const m of matches){
+        const t1 = teamsById.get(m.team1Id)?.name || 'A';
+        const t2 = teamsById.get(m.team2Id)?.name || 'B';
+        const btn = document.createElement('button');
+        const claimed = m.claimedBy && m.claimedBy !== deviceId;
+        btn.className = claimed ? 'danger' : (m.claimedBy===deviceId ? 'warn' : 'primary');
+        btn.disabled = claimed;
+        btn.textContent = `${t1} vs ${t2}  •  ${m.status}  •  ${m.aSets||0}:${m.bSets||0}${m.claimedBy?('  •  zajęty'):''}`;
+        btn.addEventListener('click', () => claim(m.id));
+        list.appendChild(btn);
+      }
+    }
+
+    function renderLive(state){
+      state = VB_Rules.ensureStateShape(state);
+      const teamsById = new Map(state.teams.map(t => [t.id, t]));
+      const m = state.matches.find(x => x.id === selectedMatchId);
+      if (!m){
+        $('live').style.display = 'none';
+        $('release').style.display = 'none';
+        return;
+      }
+
+      $('release').style.display = 'inline-block';
+      $('live').style.display = 'block';
+
+      const t1 = teamsById.get(m.team1Id)?.name || 'Drużyna A';
+      const t2 = teamsById.get(m.team2Id)?.name || 'Drużyna B';
+      const idx = VB_Rules.currentSetIndex(m);
+      const set = (m.sets && m.sets[idx]) || {a:0,b:0};
+
+      $('liveMeta').textContent = `${VB_UI.stageLabel(m.stage)}${m.stage==='group'&&m.group?(' • Grupa '+m.group):''} • Set ${idx+1}/3 • status: ${m.status}`;
+      $('liveTitle').textContent = `${t1} vs ${t2}`;
+
+      $('aName').textContent = t1;
+      $('bName').textContent = t2;
+      $('aSets').textContent = m.aSets ?? 0;
+      $('bSets').textContent = m.bSets ?? 0;
+      $('aPts').textContent = set.a ?? 0;
+      $('bPts').textContent = set.b ?? 0;
+
+      // confirm button only for group and when finished
+      const showConfirm = (m.stage==='group' && m.status==='finished');
+      $('confirm').style.display = showConfirm ? 'inline-block' : 'none';
+    }
+
+    async function claim(matchId){
+      if (!ensurePin()) return;
+      const st = structuredClone(VB_Store.getCurrent().state);
+      const m = st.matches.find(x => x.id===matchId);
+      if (!m) return;
+      const res = VB_Rules.claimMatch(m, deviceId);
+      if (!res.ok) return alert('Ten mecz jest obsługiwany na innym urządzeniu.');
+      selectedMatchId = matchId;
+      const r = await VB_Store.updateState(st);
+      if (!r.ok && r.conflict){
+        // try again with fresh state
+        renderAll(r.state);
+        return;
+      }
+      renderAll(VB_Store.getCurrent().state);
+    }
+
+    async function release(){
+      if (!ensurePin()) return;
+      const st = structuredClone(VB_Store.getCurrent().state);
+      const m = st.matches.find(x => x.id===selectedMatchId);
+      if (!m) { selectedMatchId=null; renderAll(st); return; }
+      const res = VB_Rules.releaseMatch(m, deviceId);
+      if (!res.ok) return alert('Nie możesz zwolnić meczu, który jest zajęty przez inne urządzenie.');
+      selectedMatchId = null;
+      const r = await VB_Store.updateState(st);
+      if (!r.ok && r.conflict) renderAll(r.state);
+      else renderAll(VB_Store.getCurrent().state);
+    }
+
+    async function score(side, delta){
+      if (!ensurePin()) return;
+      const st = structuredClone(VB_Store.getCurrent().state);
+      const m = st.matches.find(x => x.id===selectedMatchId);
+      if (!m) return;
+      if (m.claimedBy && m.claimedBy !== deviceId) return alert('Mecz jest zajęty przez inne urządzenie.');
+
+      VB_Rules.applyPoint(m, side, delta);
+
+      // Auto-popup when match finishes: ask to confirm for group.
+      if (m.stage==='group' && m.status==='finished'){
+        const ok = confirm('Mecz skończony. Zatwierdzić wynik do tabeli?');
+        if (ok) VB_Rules.confirmMatch(m);
+      }
+
+      const r = await VB_Store.updateState(st);
+      if (!r.ok && r.conflict) {
+        // On conflict, we keep local selection but refresh UI.
+        renderAll(r.state);
+      }
+    }
+
+    async function confirmNow(){
+      if (!ensurePin()) return;
+      const st = structuredClone(VB_Store.getCurrent().state);
+      const m = st.matches.find(x => x.id===selectedMatchId);
+      if (!m) return;
+      VB_Rules.confirmMatch(m);
+      const r = await VB_Store.updateState(st);
+      if (!r.ok && r.conflict) renderAll(r.state);
+    }
+
+    function renderAll(state){
+      renderPicker(state);
+      renderLive(state);
+    }
+
+    function handleKeys(e){
+      if (e.repeat) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (['INPUT','SELECT','TEXTAREA'].includes(tag)) return;
+      if (!selectedMatchId) return;
+
+      const k = e.key.toLowerCase();
+      if (k==='q') return score('A', +1);
+      if (k==='w') return score('A', -1);
+      if (k==='o') return score('B', +1);
+      if (k==='p') return score('B', -1);
+    }
+
+    $('btnPin').addEventListener('click', () => {
+      const pin = prompt('PIN (zapamiętany w tej karcie):', VB_Store.getPin(slug) || '');
+      if (pin) VB_Store.setPin(slug, pin);
+    });
+
+    $('refresh').addEventListener('click', () => renderAll(VB_Store.getCurrent().state));
+    $('release').addEventListener('click', release);
+
+    $('aPlus').addEventListener('click', () => score('A', +1));
+    $('aMinus').addEventListener('click', () => score('A', -1));
+    $('bPlus').addEventListener('click', () => score('B', +1));
+    $('bMinus').addEventListener('click', () => score('B', -1));
+
+    $('confirm').addEventListener('click', confirmNow);
+
+    $('stage').addEventListener('change', () => {
+      fillGroups($('stage').value === 'group');
+      renderAll(VB_Store.getCurrent().state);
+    });
+
+    window.addEventListener('keydown', handleKeys);
+
+    (async () => {
+      fillStages();
+      fillGroups(true);
+
+      try {
+        await VB_Store.loadState(slug);
+      } catch (e) {
+        console.warn(e);
+        if (!confirm('Turniej nie istnieje. Utworzyć go?')) return;
+        const pin = prompt('Ustaw PIN nowego turnieju:');
+        if (!pin) return;
+        VB_Store.setPin(slug, pin);
+        await VB_Store.ensureTournament(slug, pin, VB_Rules.ensureStateShape({}));
+        await VB_Store.loadState(slug);
+      }
+
+      VB_Store.subscribe(({state}) => {
+        // Keep selection if match still exists
+        if (selectedMatchId && !state.matches.some(m => m.id===selectedMatchId)) selectedMatchId = null;
+        renderAll(state);
+      });
+
+      // stage/group UI
+      fillGroups($('stage').value === 'group');
+      renderAll(VB_Store.getCurrent().state);
+    })();
+  </script>
+</body>
+</html>

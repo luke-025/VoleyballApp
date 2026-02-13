@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Overlay (public)</title>
+  <style>
+    body{margin:0;background:transparent;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    .wrap{padding:18px 22px}
+    .card{display:inline-block;background:rgba(0,0,0,0.70);color:#fff;border-radius:14px;padding:16px 18px;min-width:360px}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:14px}
+    .team{display:flex;align-items:center;gap:10px}
+    .name{font-size:28px;font-weight:700;line-height:1.1;max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .meta{opacity:.85;font-size:14px;margin-bottom:10px}
+    .score{display:flex;align-items:center;gap:14px}
+    .sets{font-size:22px;opacity:.95}
+    .points{font-size:40px;font-weight:800;min-width:64px;text-align:right}
+    .divider{height:1px;background:rgba(255,255,255,0.12);margin:10px 0}
+    .hint{opacity:.7;font-size:12px;margin-top:6px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" id="card">
+      <div class="meta" id="meta">Ładowanie…</div>
+      <div class="row">
+        <div class="team"><div class="name" id="aName">—</div></div>
+        <div class="score"><div class="sets" id="aSets">0</div><div class="points" id="aPts">0</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="row">
+        <div class="team"><div class="name" id="bName">—</div></div>
+        <div class="score"><div class="sets" id="bSets">0</div><div class="points" id="bPts">0</div></div>
+      </div>
+      <div class="hint" id="hint"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="/vb-config.js"></script>
+  <script src="/vb-ui-shared.js"></script>
+  <script src="/vb-rules.js"></script>
+  <script src="/vb-store.js"></script>
+  <script>
+    (async () => {
+      const slug = VB_UI.getTournamentSlug();
+
+      const setText = (id, v) => document.getElementById(id).textContent = v;
+
+      function render(state){
+        state = VB_Rules.ensureStateShape(state);
+        const teamsById = new Map(state.teams.map(t => [t.id, t]));
+        const match = state.matches.find(m => m.id === state.programMatchId) || null;
+
+        if (!match){
+          setText('meta', `Turniej: ${slug} • brak ustawionego meczu głównego`);
+          setText('aName','BRAK MECZU');
+          setText('bName','');
+          setText('aSets','');
+          setText('bSets','');
+          setText('aPts','');
+          setText('bPts','');
+          setText('hint','Ustaw mecz główny w control.html');
+          return;
+        }
+
+        const t1 = teamsById.get(match.team1Id);
+        const t2 = teamsById.get(match.team2Id);
+        const idx = VB_Rules.currentSetIndex(match);
+        const set = (match.sets && match.sets[idx]) || {a:0,b:0};
+
+        setText('meta', `${VB_UI.stageLabel(match.stage)}${match.stage==='group' && match.group ? ' • Grupa '+match.group : ''} • Set ${idx+1}/3`);
+        setText('aName', t1?.name || 'Drużyna A');
+        setText('bName', t2?.name || 'Drużyna B');
+        setText('aSets', match.aSets ?? 0);
+        setText('bSets', match.bSets ?? 0);
+        setText('aPts', set.a ?? 0);
+        setText('bPts', set.b ?? 0);
+        setText('hint', match.status);
+      }
+
+      try {
+        await VB_Store.loadState(slug);
+        render(VB_Store.getCurrent().state);
+        VB_Store.subscribe(({state}) => render(state));
+      } catch (e) {
+        console.error(e);
+        setText('meta', 'Błąd: ' + (e.message || e));
+      }
+    })();
+  </script>
+</body>
+</html>
