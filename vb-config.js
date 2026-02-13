@@ -18,5 +18,6 @@ window.VB_CONFIG = {
     { key: 'final', label: 'Finał' },
   ],
 
+
   GROUPS: ['A', 'B', 'C', 'D'],
 };
